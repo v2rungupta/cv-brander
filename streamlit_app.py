@@ -34,12 +34,20 @@ uploaded_letterhead = st.file_uploader(
     key="letterhead"
 )
 
+# Path to default letterhead included in the repo
+default_letterhead_path = st.secrets["default_letterhead"]
+
 if uploaded_letterhead:
     st.success("Using uploaded letterhead")
     letterhead_stream = BytesIO(uploaded_letterhead.read())
 else:
-    st.error("⚠️ You must upload a letterhead. Default file cannot be loaded in Streamlit Cloud.")
-    st.stop()
+    if os.path.exists(default_letterhead_path):
+        st.info("Using default letterhead")
+        with open(default_letterhead_path, "rb") as f:
+            letterhead_stream = BytesIO(f.read())
+    else:
+        st.error("⚠️ Default letterhead not found. Upload a letterhead to proceed.")
+        st.stop()
 
 
 # --- UPLOAD CV FILES ---
@@ -128,3 +136,8 @@ if uploaded_files:
         file_name="branded_cvs.zip",
         mime="application/zip"
     )
+
+
+st.write("Current working dir:", os.getcwd())
+st.write("Script folder:", os.path.dirname(__file__))
+st.write("Files in root:", os.listdir("/mount/src"))
