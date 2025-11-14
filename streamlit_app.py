@@ -42,20 +42,19 @@ uploaded_letterhead = st.file_uploader(
     key="letterhead"
 )
 
-# Path to default letterhead included in the repo
-default_letterhead = "C:/Users/vrngu/OneDrive/Desktop/Scripts for Fakhrul/CV Branding/assets/default_letterhead.pdf" 
+# Path to default letterhead in assets folder
+default_letterhead_path = os.path.join(
+    os.path.dirname(__file__), "assets", "default_letterhead.pdf"
+)
 
-if uploaded_letterhead:
-    st.success("Using uploaded letterhead")
-    letterhead_stream = BytesIO(uploaded_letterhead.read())
+if os.path.exists(default_letterhead_path):
+    st.info("Using default letterhead")
+    with open(default_letterhead_path, "rb") as f:
+        letterhead_stream = BytesIO(f.read())
 else:
-    if os.path.exists(default_letterhead_path):
-        st.info("Using default letterhead")
-        with open(default_letterhead_path, "rb") as f:
-            letterhead_stream = BytesIO(f.read())
-    else:
-        st.error("⚠️ Default letterhead not found. Upload a letterhead to proceed.")
-        st.stop()
+    st.error(f"⚠️ Default letterhead not found at {default_letterhead_path}. Upload a letterhead to proceed.")
+    st.stop()
+
 
 
 # --- UPLOAD CV FILES ---
