@@ -43,7 +43,7 @@ uploaded_letterhead = st.file_uploader(
 )
 
 # Path to default letterhead included in the repo
-default_letterhead_path = st.secrets["default_letterhead"]
+default_letterhead = "C:/Users/vrngu/OneDrive/Desktop/Scripts for Fakhrul/CV Branding/assets/default_letterhead.pdf" 
 
 if uploaded_letterhead:
     st.success("Using uploaded letterhead")
