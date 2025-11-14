@@ -27,23 +27,20 @@ output_folder = "branded_cvs"
 os.makedirs(output_folder, exist_ok=True)
 
 # --- DEFAULT LETTERHEAD ---
-default_letterhead_path = os.path.join(os.path.dirname(__file__), "letterhead.pdf")
-
-# --- OPTIONAL LETTERHEAD UPLOAD ---
 st.subheader("Letterhead")
 uploaded_letterhead = st.file_uploader(
-    "Upload a custom letterhead (PDF only, optional)",
+    "Upload a custom letterhead (PDF only)",
     type="pdf",
     key="letterhead"
 )
-if uploaded_letterhead is not None:
+
+if uploaded_letterhead:
     st.success("Using uploaded letterhead")
-    letterhead_path = os.path.join("letterhead_temp.pdf")
-    with open(letterhead_path, "wb") as f:
-        f.write(uploaded_letterhead.read())
+    letterhead_stream = BytesIO(uploaded_letterhead.read())
 else:
-    st.info("Using default letterhead")
-    letterhead_path = default_letterhead_path
+    st.error("⚠️ You must upload a letterhead. Default file cannot be loaded in Streamlit Cloud.")
+    st.stop()
+
 
 # --- UPLOAD CV FILES ---
 st.subheader("Upload CVs to Brand")
@@ -52,7 +49,7 @@ uploaded_files = st.file_uploader("Upload PDF resumes", type="pdf", accept_multi
 # --- PROCESS FILES ---
 if uploaded_files:
     # Read letterhead once
-    brand_reader = PdfReader(letterhead_path)
+    brand_reader = PdfReader(letterhead_stream)
     brand_page_orig = brand_reader.pages[0]
     brand_w = float(brand_page_orig.mediabox.width)
     brand_h = float(brand_page_orig.mediabox.height)
