@@ -24,7 +24,15 @@ SCALE_MARGIN = 2.0       # extra shrink (percent)
 
 # --- FOLDER SETUP ---
 output_folder = "branded_cvs"
-os.makedirs(output_folder, exist_ok=True)
+# Clear folder before each run
+if os.path.exists(output_folder):
+    for f in os.listdir(output_folder):
+        file_path = os.path.join(output_folder, f)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+else:
+    os.makedirs(output_folder, exist_ok=True)
+
 
 # --- DEFAULT LETTERHEAD ---
 st.subheader("Letterhead")
@@ -137,7 +145,3 @@ if uploaded_files:
         mime="application/zip"
     )
 
-
-st.write("Current working dir:", os.getcwd())
-st.write("Script folder:", os.path.dirname(__file__))
-st.write("Files in root:", os.listdir("/mount/src"))
