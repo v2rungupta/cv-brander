@@ -34,7 +34,7 @@ else:
     os.makedirs(output_folder, exist_ok=True)
 
 
-# --- DEFAULT LETTERHEAD ---
+# --- LETTERHEAD LOGIC ---
 st.subheader("Letterhead")
 uploaded_letterhead = st.file_uploader(
     "Upload a custom letterhead (PDF only)",
@@ -42,17 +42,22 @@ uploaded_letterhead = st.file_uploader(
     key="letterhead"
 )
 
-# Path to default letterhead in assets folder
+# Path to default letterhead
 default_letterhead_path = os.path.join(
     os.path.dirname(__file__), "assets", "default_letterhead.pdf"
 )
 
-if os.path.exists(default_letterhead_path):
+if uploaded_letterhead is not None:
+    # Use the one the user just uploaded
+    st.success("Using uploaded custom letterhead")
+    letterhead_stream = BytesIO(uploaded_letterhead.read())
+elif os.path.exists(default_letterhead_path):
+    # Use the default asset
     st.info("Using default letterhead")
     with open(default_letterhead_path, "rb") as f:
         letterhead_stream = BytesIO(f.read())
 else:
-    st.error(f"⚠️ Default letterhead not found at {default_letterhead_path}. Upload a letterhead to proceed.")
+    st.error(f"⚠️ No letterhead found. Please upload one.")
     st.stop()
 
 
