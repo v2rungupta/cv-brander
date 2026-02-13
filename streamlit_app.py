@@ -1,30 +1,28 @@
 import os
-import copy
 import time
-from PyPDF2 import PdfReader, PdfWriter, PageObject, Transformation
+from pypdf import PdfReader, PdfWriter, PageObject, Transformation
 import streamlit as st
 from PIL import Image
 from io import BytesIO
 import zipfile
 
 # --- LOAD LOGO ---
-logo_path = os.path.join(os.path.dirname(__file__), "logo.png")  # Make sure logo.png is in the same folder
+logo_path = os.path.join(os.path.dirname(__file__), "logo.png")  
 if os.path.exists(logo_path):
     logo = Image.open(logo_path)
-    st.image(logo, width=500)  # Adjust width as needed
+    st.image(logo, width=500)
 
 # --- PAGE TITLE ---
 st.title("CV Branding with Letterhead")
 
 # --- SAFETY / TUNING ---
-PAGE_PADDING = 20        # points of padding between CV and letterhead edges
+PAGE_PADDING = 20        # points of padding
 MAX_WRITE_RETRIES = 5    # handle file locks
-SCALE_DOWN_IF_LARGER = True  # scale CV down if it doesn't fit letterhead
+SCALE_DOWN_IF_LARGER = True 
 SCALE_MARGIN = 2.0       # extra shrink (percent)
 
 # --- FOLDER SETUP ---
 output_folder = "branded_cvs"
-# Clear folder before each run
 if os.path.exists(output_folder):
     for f in os.listdir(output_folder):
         file_path = os.path.join(output_folder, f)
@@ -34,6 +32,10 @@ else:
     os.makedirs(output_folder, exist_ok=True)
 
 
+# --- SUFFIX INPUT ---
+st.subheader("Settings")
+filename_suffix = st.text_input("Enter filename suffix", value="_Branded")  
+
 # --- LETTERHEAD LOGIC ---
 st.subheader("Letterhead")
 uploaded_letterhead = st.file_uploader(
@@ -42,25 +44,20 @@ uploaded_letterhead = st.file_uploader(
     key="letterhead"
 )
 
-# Path to default letterhead
 default_letterhead_path = os.path.join(
     os.path.dirname(__file__), "assets", "default_letterhead.pdf"
 )
 
 if uploaded_letterhead is not None:
-    # Use the one the user just uploaded
     st.success("Using uploaded custom letterhead")
     letterhead_stream = BytesIO(uploaded_letterhead.read())
 elif os.path.exists(default_letterhead_path):
-    # Use the default asset
     st.info("Using default letterhead")
     with open(default_letterhead_path, "rb") as f:
         letterhead_stream = BytesIO(f.read())
 else:
     st.error(f"⚠️ No letterhead found. Please upload one.")
     st.stop()
-
-
 
 # --- UPLOAD CV FILES ---
 st.subheader("Upload CVs to Brand")
@@ -86,11 +83,10 @@ if uploaded_files:
         writer = PdfWriter()
 
         for page_index, cv_page in enumerate(cv_reader.pages):
-            brand_page = copy.deepcopy(brand_page_orig)
-            cv_copy = copy.deepcopy(cv_page)
-
-            cv_w = float(cv_copy.mediabox.width)
-            cv_h = float(cv_copy.mediabox.height)
+            # Instead of deepcopy, we use the objects directly.
+            # PyPDF2/pypdf handles the references when adding to the writer.
+            cv_w = float(cv_page.mediabox.width)
+            cv_h = float(cv_page.mediabox.height)
 
             avail_w = brand_w - 2 * PAGE_PADDING
             avail_h = brand_h - 2 * PAGE_PADDING
@@ -106,34 +102,41 @@ if uploaded_files:
             scaled_w = cv_w * scale
             scaled_h = cv_h * scale
             x_offset = (brand_w - scaled_w) / 2.0
-            y_offset = (brand_h - scaled_h) / 2.0
+            y_offset = (brand_h - scaled_h) / 2.0 - 12.0
 
             transf = Transformation().scale(scale, scale).translate(x_offset, y_offset)
 
+            # Create a clean blank page for every iteration
             final_page = PageObject.create_blank_page(width=brand_w, height=brand_h)
-            final_page.merge_page(brand_page)
-            cv_copy.add_transformation(transf)
-            final_page.merge_page(cv_copy)
+            
+            # Merge the letterhead background
+            final_page.merge_page(brand_page_orig)
+            
+            # Apply transformation to the CV content and overlay it
+            cv_page.add_transformation(transf)
+            final_page.merge_page(cv_page)
+            
             writer.add_page(final_page)
 
-        out_path = os.path.join(output_folder, fname)
+        base_name, extension = os.path.splitext(fname)
+        branded_fname = f"{base_name}{filename_suffix}{extension}"
+        out_path = os.path.join(output_folder, branded_fname)
         for attempt in range(1, MAX_WRITE_RETRIES + 1):
             try:
                 with open(out_path, "wb") as f_out:
                     writer.write(f_out)
-                st.success(f"✅ {fname} -> written to {output_folder}")
+                st.success(f"✅ {fname} processed.")
                 break
             except PermissionError:
                 wait = 1.0 * attempt
-                st.warning(f"PermissionError writing {out_path}, retrying in {wait}s (attempt {attempt})...")
+                st.warning(f"Retrying {fname} in {wait}s...")
                 time.sleep(wait)
         else:
-            st.error(f"❌ Failed to write {out_path} after {MAX_WRITE_RETRIES} attempts.")
+            st.error(f"❌ Failed to write {out_path}.")
 
     st.info(f"All processed CVs are saved in '{output_folder}'")
 
     # --- ZIP DOWNLOAD ---
-    st.subheader("Download Branded CVs as ZIP")
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
         for fname in os.listdir(output_folder):
@@ -148,4 +151,3 @@ if uploaded_files:
         file_name="branded_cvs.zip",
         mime="application/zip"
     )
-
