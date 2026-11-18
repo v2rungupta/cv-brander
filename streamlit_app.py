@@ -1,6 +1,6 @@
 import os
 import time
-from pypdf import PdfReader, PdfWriter, PageObject, Transformation
+from pypdf import PdfReader, PdfWriter, Transformation
 import streamlit as st
 from PIL import Image
 from io import BytesIO
@@ -106,17 +106,15 @@ if uploaded_files:
 
             transf = Transformation().scale(scale, scale).translate(x_offset, y_offset)
 
-            # Create a clean blank page for every iteration
-            final_page = PageObject.create_blank_page(width=brand_w, height=brand_h)
-            
+            # Create the blank page inside the writer: pypdf 7+ only lets a
+            # page's content be rewritten once it belongs to a writer.
+            final_page = writer.add_blank_page(width=brand_w, height=brand_h)
+
             # Merge the letterhead background
             final_page.merge_page(brand_page_orig)
-            
-            # Apply transformation to the CV content and overlay it
-            cv_page.add_transformation(transf)
-            final_page.merge_page(cv_page)
-            
-            writer.add_page(final_page)
+
+            # Overlay the CV, scaled and positioned, without modifying the source page
+            final_page.merge_transformed_page(cv_page, transf)
 
         base_name, extension = os.path.splitext(fname)
         branded_fname = f"{base_name}{filename_suffix}{extension}"
